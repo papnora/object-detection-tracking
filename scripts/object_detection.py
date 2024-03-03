@@ -1,13 +1,15 @@
 import torch
 import sys
+from pathlib import Path
 sys.path.append('/notebooks/ObjectDetectionTracking_PN/yolov7')
 import cv2 
 import numpy as np
 from models.experimental import attempt_load  # YOLOv7 modell betöltése
 from torch import nn
 from utils.datasets import letterbox
-from utils.general import non_max_suppression, scale_coords
+from utils.general import non_max_suppression, scale_coords, xyxy2xywh
 from utils.plots import plot_one_box
+import pandas as pd
 
 def load_weights(weights: str, imgsz: int = 640, batch_size: int = 1, device: str = "cuda") -> nn.Module:
         ckpt = torch.load(weights, map_location=device)
@@ -30,8 +32,17 @@ stride = int(model.stride.max())  # modell stride
 names = model.module.names if hasattr(model, 'module') else model.names
 model.eval()
 
-
 video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/hongkong_pedestrians.mp4'
+output_dir = Path('/notebooks/ObjectDetectionTracking_PN/datas/detections/')
+if not output_dir.exists():
+    output_dir.mkdir(parents=True)
+output_path = output_dir / Path(video_path).with_suffix(".csv").name
+detections = pd.DataFrame(columns=['label', 'conf', 'x', 'y', 'w', 'h'])
+if Path(output_path).exists():
+    fs = [f for f in output_dir.glob(f'*{output_path.stem}*')]
+    output_path = output_dir / (str(Path(video_path).stem)+f'{len(fs)}.csv')
+    print(output_path)
+
 cap = cv2.VideoCapture(video_path)
 ret, frame = cap.read()
 width = frame.shape[1]
@@ -61,7 +72,9 @@ try:
         with torch.no_grad():  #gradiensek számítása GPU memóriaszivárgást okozna
             pred = model(img, augment=False)[0]
             pred = non_max_suppression(pred, 0.4, 0.5, classes=None, agnostic=False)
-
+        
+        gn = torch.tensor(frame.shape)[[1, 0, 1, 0]]  # normalizált gain whwh
+        
         # Detekciók rajzolása a képkockára
         for i, det in enumerate(pred):  # Detekciók az egyes képkockákhoz
             if len(det):
@@ -69,12 +82,22 @@ try:
                 for *xyxy, conf, cls in det:
                     label = f'{names[int(cls)]} {conf:.2f}'
                     plot_one_box(xyxy, frame, label=label, color=(255, 0, 0), line_thickness=3)
+                    xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).cpu().tolist()  # normalizált xywh
+                    x,y,w,h = xywh
+                    row = {'label':int(cls.cpu()), 'conf': float(conf.cpu().item()), 'x': x, 'y': y, 'w': w, 'h': h}
+                    print(row)
+                    detections.loc[len(detections)] = row
+                    
 
         #cv2.imshow('YOLOv7 Object Detection', frame)
         out.write(frame)
         #if cv2.waitKey(1) == ord('q'):  # 'q' billentyűvel kilépés
-except KeyboardInterrupt: 
+except KeyboardInterrupt:
     print('Exiting...')
+finally:
+    detections.head(5)
+    detections.info()
+    detections.to_csv(output_path, index=False)
 
 cap.release()
 out.release()
