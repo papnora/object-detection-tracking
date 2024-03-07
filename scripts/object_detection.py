@@ -37,7 +37,7 @@ output_dir = Path('/notebooks/ObjectDetectionTracking_PN/datas/detections/')
 if not output_dir.exists():
     output_dir.mkdir(parents=True)
 output_path = output_dir / Path(video_path).with_suffix(".csv").name
-detections = pd.DataFrame(columns=['label', 'conf', 'x', 'y', 'w', 'h'])
+detections = pd.DataFrame(columns=['frame_id','label', 'conf', 'x', 'y', 'w', 'h']) # x,y bounding box bal felső sarki koodrinátái - w,h bounding box szélessége és magassága,  conf - confidencia, label  + cls az objektum osztályaz. (string , szám)
 if Path(output_path).exists():
     fs = [f for f in output_dir.glob(f'*{output_path.stem}*')]
     output_path = output_dir / (str(Path(video_path).stem)+f'{len(fs)}.csv')
@@ -45,6 +45,7 @@ if Path(output_path).exists():
 
 cap = cv2.VideoCapture(video_path)
 ret, frame = cap.read()
+frame_id = 0  # Képkocka számláló
 width = frame.shape[1]
 height = frame.shape[0]
 print(frame.shape)
@@ -84,13 +85,15 @@ try:
                     plot_one_box(xyxy, frame, label=label, color=(255, 0, 0), line_thickness=3)
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).cpu().tolist()  # normalizált xywh
                     x,y,w,h = xywh
-                    row = {'label':int(cls.cpu()), 'conf': float(conf.cpu().item()), 'x': x, 'y': y, 'w': w, 'h': h}
+                    row = {'frame_id': frame_id, 'label': int(cls.cpu()), 'conf': float(conf.cpu().item()), 'x': x, 'y': y, 'w': w, 'h': h}
                     print(row)
                     detections.loc[len(detections)] = row
+                    #detections = detections.append(row, ignore_index=True)
                     
 
         #cv2.imshow('YOLOv7 Object Detection', frame)
         out.write(frame)
+        frame_id += 1  # Képkocka számláló növelése
         #if cv2.waitKey(1) == ord('q'):  # 'q' billentyűvel kilépés
 except KeyboardInterrupt:
     print('Exiting...')
