@@ -83,7 +83,7 @@ try:
                 for *xyxy, conf, cls in det:
                     label = f'{names[int(cls)]} {conf:.2f}'
                     plot_one_box(xyxy, frame, label=label, color=(255, 0, 0), line_thickness=3)
-                    xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).cpu().tolist()  # normalizált xywh
+                    xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4))).view(-1).cpu().tolist()  # normalizált xywh
                     x,y,w,h = xywh
                     row = {'frame_id': frame_id, 'label': int(cls.cpu()), 'conf': float(conf.cpu().item()), 'x': x, 'y': y, 'w': w, 'h': h}
                     print(row)
