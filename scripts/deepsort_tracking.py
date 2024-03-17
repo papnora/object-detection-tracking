@@ -1,68 +1,51 @@
 import sys
+from abc import ABC, abstractmethod
 sys.path.append('/notebooks/ObjectDetectionTracking_PN')
 from deep_sort.deep_sort.tracker import Tracker as DeepSortTracker
-from deep_sort.tools import generate_detections as gdet
-from deep_sort.deep_sort import nn_matching
+from deep_sort.deep_sort.nn_matching import NearestNeighborDistanceMetric  
 from deep_sort.deep_sort.detection import Detection
 import numpy as np
 
 
-class Tracker:
-    tracker = None
-    encoder = None
-    tracks = None
+class BaseTrack(ABC):
+    @abstractmethod
+    def __init__(self, track_id, bbox):
+        pass
 
+
+class BaseTracker(ABC):
+    tracker = None
+    tracks = []
+    
+    @abstractmethod
+    def __init__(self):
+        pass
+    
+    @abstractmethod
+    def update(self, detections):
+        pass
+    
+    
+class Track(BaseTrack):
+    def __init__(self, track_id, bbox):
+        self.track_id = track_id
+        self.bbox = bbox
+
+
+class DeepSORT(BaseTracker):
     def __init__(self):
         max_cosine_distance = 0.4
-        nn_budget = None
-
-        encoder_model_filename = '/weights/MARS/mars-small128.pb'
-        #encoder_model_filename = '/notebooks/ObjectDetectionTracking_PN/weights/MARS/mars-small128.pb'
-
-        metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
+        nn_budget = 100
+        metric = NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
         self.tracker = DeepSortTracker(metric)
-        self.encoder = gdet.create_box_encoder(encoder_model_filename, batch_size=1)
+        self.tracks = []
 
-    def update(self, frame, detections):
-
-        if len(detections) == 0:
-            self.tracker.predict()
-            self.tracker.update([])  
-            self.update_tracks()
-            return
-
-        bboxes = np.asarray([d[:-1] for d in detections])
-        bboxes[:, 2:] = bboxes[:, 2:] - bboxes[:, 0:2]
-        scores = [d[-1] for d in detections]
-
-        features = self.encoder(frame, bboxes)
-
-        dets = []
-        for bbox_id, bbox in enumerate(bboxes):
-            dets.append(Detection(bbox, scores[bbox_id], features[bbox_id]))
-
+    def update(self, detections): 
         self.tracker.predict()
-        self.tracker.update(dets)
-        self.update_tracks()
+        deepsort_detections = [Detection([(d.x - d.w), (d.y - d.h), d.w, d.h], d.conf, []) for d in detections]
+        self.tracker.update(deepsort_detections)
+        self.update_tracks()        
 
     def update_tracks(self):
-        tracks = []
-        for track in self.tracker.tracks:
-            if not track.is_confirmed() or track.time_since_update > 1:
-                continue
-            bbox = track.to_tlbr()
+        self.tracks = [Track(track.track_id, track.to_tlbr()) for track in self.tracker.tracks if track.is_confirmed() and track.time_since_update <= 1]
 
-            id = track.track_id
-
-            tracks.append(Track(id, bbox))
-
-        self.tracks = tracks
-
-
-class Track:
-    track_id = None
-    bbox = None
-
-    def __init__(self, id, bbox):
-        self.track_id = id
-        self.bbox = bbox
