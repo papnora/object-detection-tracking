@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 sys.path.append('/notebooks/ObjectDetectionTracking_PN/yolov7')
 import cv2 
+import yaml
 import numpy as np
 from models.experimental import attempt_load  # YOLOv7 modell betöltése
 from torch import nn
@@ -10,6 +11,11 @@ from utils.datasets import letterbox
 from utils.general import non_max_suppression, scale_coords, xyxy2xywh
 from utils.plots import plot_one_box
 import pandas as pd
+
+yaml_path = '/notebooks/ObjectDetectionTracking_PN/yolov7/data/coco.yaml'
+with open(yaml_path, 'r') as yaml_file:
+    coco_data = yaml.safe_load(yaml_file)
+names = coco_data['names']
 
 def load_weights(weights: str, imgsz: int = 640, batch_size: int = 1, device: str = "cuda") -> nn.Module:
         ckpt = torch.load(weights, map_location=device)
@@ -24,7 +30,7 @@ def load_weights(weights: str, imgsz: int = 640, batch_size: int = 1, device: st
             elif type(m) is Conv:
                 m._non_persistent_buffers_set = set()  # pytorch 1.6.0 compatibility
         return model[-1]
-# Modell betöltése és előkészítése
+
 
 model = attempt_load('/notebooks/ObjectDetectionTracking_PN/weights/yolov7-tiny.pt')  # Modellsúlyok elérési útvonala
 model.half()
@@ -32,7 +38,8 @@ stride = int(model.stride.max())  # modell stride
 names = model.module.names if hasattr(model, 'module') else model.names
 model.eval()
 
-video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/hongkong_pedestrians.mp4'
+#video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/hongkong_pedestrians.mp4'
+video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/park_people.mp4'
 output_dir = Path('/notebooks/ObjectDetectionTracking_PN/datas/detections/')
 if not output_dir.exists():
     output_dir.mkdir(parents=True)
@@ -81,8 +88,9 @@ try:
             if len(det):
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], frame.shape).round()
                 for *xyxy, conf, cls in det:
-                    label = f'{names[int(cls)]} {conf:.2f}'
-                    plot_one_box(xyxy, frame, label=label, color=(255, 0, 0), line_thickness=3)
+                    class_name = names[int(cls)]
+                    label_with_index = f'{int(cls)}: {class_name} {conf:.2f}'
+                    plot_one_box(xyxy, frame, label=label_with_index, color=(255, 0, 0), line_thickness=3)
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4))).view(-1).cpu().tolist()  # normalizált xywh
                     x,y,w,h = xywh
                     row = {'frame_id': frame_id, 'label': int(cls.cpu()), 'conf': float(conf.cpu().item()), 'x': x, 'y': y, 'w': w, 'h': h}
@@ -90,8 +98,7 @@ try:
                     detections.loc[len(detections)] = row
                     #detections = detections.append(row, ignore_index=True)
                     
-
-        #cv2.imshow('YOLOv7 Object Detection', frame)
+                    
         out.write(frame)
         frame_id += 1  # Képkocka számláló növelése
         #if cv2.waitKey(1) == ord('q'):  # 'q' billentyűvel kilépés
