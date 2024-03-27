@@ -6,6 +6,7 @@ import cv2
 import yaml
 sys.path.append('/notebooks/ObjectDetectionTracking_PN')
 from deepsort_tracking import DeepSORT 
+#from bytetrack_tracking import ByteTrack
 import os 
 import random
 import pandas as pd
@@ -25,10 +26,14 @@ print("A beolvasás sikeres volt.")
 
 video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/park_people.mp4'
 #video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/hongkong_pedestrians.mp4'
-tracking_video_out = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/deepsort_out.avi')
+deepsort_video_out = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/deepsort_out.avi')
+#fairmot_video_out = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/fairmot_out.avi')
+bytetrack_video_out = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/bytetrack_out.avi')
 
+deepsort_tracker = DeepSORT()
+#fairmot_tracker = FairMOT()
+#bytetrack_tracker = ByteTrack(track_thresh=0.5, track_buffer=30)
 
-tracker = DeepSORT()
 colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for j in range(10)]
 #--
 
@@ -38,8 +43,11 @@ frame_id = 0
 width = frame.shape[1]
 height = frame.shape[0]
 print(frame.shape)
-out = cv2.VideoWriter(str(tracking_video_out), cv2.VideoWriter_fourcc(*'DIVX'), 20.0, (width, height))
+out = cv2.VideoWriter(str(deepsort_video_out), cv2.VideoWriter_fourcc(*'DIVX'), 20.0, (width, height))
+#out = cv2.VideoWriter(str(bytetrack_video_out), cv2.VideoWriter_fourcc(*'DIVX'), 20.0, (width, height))
 
+#out = cv2.VideoWriter(str(fairmot_video_out), cv2.VideoWriter_fourcc(*'DIVX'), 20.0, (width, height))
+      
 
 try: 
     for _ in tqdm(range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))):
@@ -50,10 +58,11 @@ try:
         pred = df[df['frame_id'] == frame_id]
         
         #[print(d) for d in pred.itertuples()]
-        tracker.update(list(pred.itertuples()))
+        deepsort_tracker.update(list(pred.itertuples()))
+       # bytetrack_tracker.update(list(pred.itertuples()))
     
         # kirajzolás
-        for track in tracker.tracks:
+        for track in deepsort_tracker.tracks:
             bbox = track.bbox  # bbox koordinátái - top-left bottom-right / 4 elemű tuple lista
             track_id = track.track_id  
 
@@ -66,10 +75,22 @@ try:
             cv2.putText(frame, label_name, (int(bbox[0]), int(bbox[1]+15)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, colors[track_id % len(colors)], 2)
             cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), colors[track_id % len(colors)], 2)
             
-
         out.write(frame)
         frame_id += 1
-
+        
+       # for track in bytetrack_tracker.tracks:
+        #    bbox = track.bbox
+        #   track_id = track.track_id
+        #    label_index = pred[pred['frame_id'] == frame_id]['label'].values[0]
+        #    label_name = names[label_index]
+            
+        #    cv2.putText(frame, f'ID: {track_id}', (int(bbox[0]), int(bbox[1]-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, colors[track_id % len(colors)], 2)
+        #    cv2.putText(frame, label_name, (int(bbox[0]), int(bbox[1]+15)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, colors[track_id % len(colors)], 2)
+        #    cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), colors[track_id % len(colors)], 2)
+        
+        #out.write(frame)
+        #frame_id += 1
+        
 except KeyboardInterrupt:
     print('Exiting...')
     
