@@ -18,19 +18,6 @@ from tqdm import tqdm
 
 import pandas as pd
 
-# Detekciók beolvasása CSV-ből
-#csv_path = '/notebooks/ObjectDetectionTracking_PN/datas/detections/park_people.csv'
-#detections = pd.read_csv(csv_path)
-#print(detections)
-#print("A beolvasás sikeres volt.")
-
-#stracks = [] # eredmények tárolása
-#for index, row in detections.iterrows():
-#    tlwh = [row['x'], row['y'], row['w'], row['h']]
-#    score = row['conf']
-#    strack = STrack(tlwh, score)
-#    stracks.append(strack)
-
 class BaseTrack(ABC):
     @abstractmethod
     def __init__(self, track_id, bbox):
