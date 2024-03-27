@@ -44,7 +44,7 @@ output_dir = Path('/notebooks/ObjectDetectionTracking_PN/datas/detections/')
 if not output_dir.exists():
     output_dir.mkdir(parents=True)
 output_path = output_dir / Path(video_path).with_suffix(".csv").name
-detections = pd.DataFrame(columns=['frame_id','label', 'conf', 'x', 'y', 'w', 'h']) # x,y bounding box bal felső sarki koodrinátái - w,h bounding box szélessége és magassága,  conf - confidencia, label  + cls az objektum osztályaz. (string , szám)
+detections = pd.DataFrame(columns=['frame_id','label', 'conf', 'x', 'y', 'w', 'h']) # x,y bounding box kp koodrinátái - w,h bounding box szélessége és magassága,  conf - confidencia, label  + cls az objektum osztályaz. (string , szám)
 if Path(output_path).exists():
     fs = [f for f in output_dir.glob(f'*{output_path.stem}*')]
     output_path = output_dir / (str(Path(video_path).stem)+f'{len(fs)}.csv')
@@ -92,8 +92,21 @@ try:
                     label_with_index = f'{int(cls)}: {class_name} {conf:.2f}'
                     plot_one_box(xyxy, frame, label=label_with_index, color=(255, 0, 0), line_thickness=3)
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4))).view(-1).cpu().tolist()  # normalizált xywh
-                    x,y,w,h = xywh
-                    row = {'frame_id': frame_id, 'label': int(cls.cpu()), 'conf': float(conf.cpu().item()), 'x': x, 'y': y, 'w': w, 'h': h}
+                    cx, cy, w, h = xywh  # Itt cx,cy a középpont
+                    # Átalakítjuk, hogy jobb alsó sarok legyen
+                    x = cx + w / 2
+                    y = cy + h / 2
+                    row = {
+                        'frame_id': frame_id, 
+                        'label': int(cls.cpu()), 
+                        'conf': float(conf.cpu().item()), 
+                        'x': x, 
+                        'y': y, 
+                        'w': w, 
+                        'h': h
+                    }
+                  #  x,y,w,h = xywh
+                   # row = {'frame_id': frame_id, 'label': int(cls.cpu()), 'conf': float(conf.cpu().item()), 'x': x, 'y': y, 'w': w, 'h': h}
                     print(row)
                     detections.loc[len(detections)] = row
                     #detections = detections.append(row, ignore_index=True)
