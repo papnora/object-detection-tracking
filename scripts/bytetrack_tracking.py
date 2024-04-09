@@ -58,12 +58,10 @@ class ByteTrack(BaseTracker):
         output_results = []
         def get_scores_and_bboxes(detection):
             output_results.append(
-                [detection.conf, 
-                 detection.x-detection.w,detection.y-detection.h,
-                 detection.x,detection.y]
+                [detection.x-detection.w,detection.y-detection.h,
+                 detection.x,detection.y,detection.conf]
             )
         [get_scores_and_bboxes(d) for d in detections]
-        print(output_results)
         output_results = np.array(output_results)
         #print(output_results)
         outputs = self.tracker.update(output_results, self.imsz, self.imsz)
