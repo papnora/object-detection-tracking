@@ -1,23 +1,24 @@
 from abc import ABC, abstractmethod
-import torch
-print(torch.__version__)
-print(torch.cuda.is_available())
-import sys
-import cv2
-import yaml
-sys.path.append('/notebooks/ObjectDetectionTracking_PN/ByteTrack/yolox')
-#/ByteTrack/yolox
-from tracker.kalman_filter import KalmanFilter
-from tracker.basetrack import BaseTrack, TrackState
-from yolox.tracker.byte_tracker import BYTETracker #as ByteTrackTracker
+from pathlib import Path
+import argparse
 import os 
 import random
-import pandas as pd
-import numpy as np
-from pathlib import Path
+import sys
+
 from tqdm import tqdm
 import pandas as pd
-import argparse
+import numpy as np
+import torch
+import cv2
+import yaml
+
+sys.path.append('/notebooks/ObjectDetectionTracking_PN/ByteTrack/yolox')
+from tracker.kalman_filter import KalmanFilter
+from tracker.basetrack import BaseTrack, TrackState
+from yolox.tracker.byte_tracker import BYTETracker 
+
+print(torch.__version__)
+print(torch.cuda.is_available())
 
 class BaseTrack(ABC):
     @abstractmethod
