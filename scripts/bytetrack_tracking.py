@@ -63,12 +63,9 @@ class ByteTrack(BaseTracker):
             )
         [get_scores_and_bboxes(d) for d in detections]
         output_results = np.array(output_results)
-        #print(output_results)
         outputs = self.tracker.update(output_results, self.imsz, self.imsz)
 
-        #`tracks` lista frissítése
         self.tracks = [Track(track.track_id, track.tlbr) for track in outputs]
-        #[print(t.bbox) for t in self.tracks]
 
 
 
