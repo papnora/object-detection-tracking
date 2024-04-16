@@ -45,7 +45,7 @@ def process_video(video_path, model_weights, output_dir):
         if not output_dir.exists():
             output_dir.mkdir(parents=True)
         
-        output_path = output_dir / (Path(video_path).with_suffix(".csv").name
+        output_path = output_dir / (Path(video_path).with_suffix(".csv").name)
         if output_path.exists():
             fs = [f for f in output_dir.glob(f'*{output_path.stem}*')]
             output_path = output_dir / (str(Path(video_path).stem) + f'{len(fs)}.csv')
@@ -103,31 +103,32 @@ def process_video(video_path, model_weights, output_dir):
                             y = cy + h / 2
                             row = {
                                 'frame_id': frame_id, 
-                                'label': int(cls.cpu()), 
+                                'label': int(cls.cpu()), #'label': names[int(cls.cpu())]
                                 'conf': float(conf.cpu().item()), 
                                 'x': x, 
                                 'y': y, 
                                 'w': w, 
                                 'h': h
                             }
-                            print(row)
+                            #print(row)
                             detections.loc[len(detections)] = row
-
+                            print("detections")
+                            print(detections)
 
                 out.write(frame)
                 frame_id += 1 
                     
-   except KeyboardInterrupt:
-        print('Exiting...')
-    finally:
-        detections.to_csv(output_path, index=False)
-        cap.release()
-        out.release()
-        cv2.destroyAllWindows()
-        print(f"A detekciók mentve: {output_path}")
+        except KeyboardInterrupt:
+            
+            print('Exiting...')
+        finally:
+            detections.to_csv(output_path, index=False)
+            cap.release()
+            out.release()
+            cv2.destroyAllWindows()
+            print(f"A detekciók mentve: {output_path}")
 
-                                    
-#video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/hongkong_pedestrians.mp4'                                    
+                                                                        
 video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/park_people.mp4'
 model_weights = '/notebooks/ObjectDetectionTracking_PN/weights/yolov7-tiny.pt'
 output_dir = '/notebooks/ObjectDetectionTracking_PN/datas/detections/'
