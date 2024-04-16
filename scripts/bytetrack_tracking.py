@@ -43,7 +43,7 @@ class Track(BaseTrack):
         self.bbox = bbox
 
 class ByteTrack(BaseTracker):
-    def __init__(self, track_thresh=0.5, track_buffer=30, imsz=(1920, 1080)):
+    def __init__(self, track_thresh=0.6, track_buffer=50, match_thresh=0.2, imsz=(1920, 1080)):
         parser = argparse.ArgumentParser()
         parser.add_argument("--track_thresh", type=float, default=0.5, help="tracking confidence threshold")
         parser.add_argument("--track_buffer", type=int, default=30, help="the frames for keep lost tracks")
