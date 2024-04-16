@@ -1,7 +1,9 @@
 import os
 import random
 import sys
+import subprocess
 from pathlib import Path
+
 
 import cv2
 import pandas as pd
@@ -12,9 +14,11 @@ from tqdm import tqdm
 sys.path.append('/notebooks/ObjectDetectionTracking_PN')
 from deepsort_tracking import DeepSORT 
 from bytetrack_tracking import ByteTrack
+from botsort_tracking import BoTSORT
 
 print(torch.__version__)
 print(torch.cuda.is_available())
+
 
 def load_yaml_config(yaml_path):
     with open(yaml_path, 'r') as yaml_file:
@@ -39,6 +43,8 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names):
         tracker = ByteTrack(imsz=(height, width))
     elif tracker_type == 'deepsort':
         tracker = DeepSORT()
+    elif tracker_type == 'botsort':
+        tracker = BoTSORT()
     else:
         raise ValueError("Unsupported tracker type")
         
@@ -52,6 +58,8 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names):
             if not ret:
                 break
 
+            cv2.putText(frame, f'Frame: {frame_id}', (width - 150, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+            
             pred = df[df['frame_id'] == frame_id]
             tracker.update(list(pred.itertuples()))
 
@@ -93,6 +101,10 @@ def main():
     # Run tracking with DeepSORT
     tracking_video_out_deep = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/deepsort_out.avi')
     run_tracking('deepsort', video_path, tracking_video_out_deep, df, names)
+    
+     # Run tracking with BotSORT
+    tracking_video_out_bot = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/botsort_out.avi')
+    run_tracking('botsort', video_path, tracking_video_out_bot, df, names)
 
 if __name__ == "__main__":
     main()
