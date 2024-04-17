@@ -14,7 +14,7 @@ from tqdm import tqdm
 sys.path.append('/notebooks/ObjectDetectionTracking_PN')
 from deepsort_tracking import DeepSORT 
 from bytetrack_tracking import ByteTrack
-from botsort_tracking import BoTSORT
+from botsort_tracking import BoTSORTTracker
 
 print(torch.__version__)
 print(torch.cuda.is_available())
@@ -44,7 +44,7 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names):
     elif tracker_type == 'deepsort':
         tracker = DeepSORT()
     elif tracker_type == 'botsort':
-        tracker = BoTSORT()
+        tracker = BoTSORTTracker()
     else:
         raise ValueError("Unsupported tracker type")
         
@@ -61,6 +61,8 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names):
             cv2.putText(frame, f'Frame: {frame_id}', (width - 150, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
             
             pred = df[df['frame_id'] == frame_id]
+           # print(pred.head())  # Kiírja az első néhány sort a DataFrame-ből
+            #print(pred.dtypes)
             tracker.update(list(pred.itertuples()))
 
             for track in tracker.tracks:
