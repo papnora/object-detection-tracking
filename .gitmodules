@@ -1,3 +1,6 @@
 [submodule "ByteTrack"]
 	path = ByteTrack
 	url = https://github.com/ifzhang/ByteTrack
+[submodule "BoT-SORT"]
+	path = BoT-SORT
+	url = https://github.com/NirAharon/BoT-SORT.git
