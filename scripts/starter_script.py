@@ -39,12 +39,13 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names):
     width = frame.shape[1]
     height = frame.shape[0]
 
-    if tracker_type == 'bytetrack':
+    if tracker_type == 'botsort':
+        tracker = BoTSORTTracker()
+    elif tracker_type == 'bytetrack':
         tracker = ByteTrack(imsz=(height, width))
     elif tracker_type == 'deepsort':
         tracker = DeepSORT()
-    elif tracker_type == 'botsort':
-        tracker = BoTSORTTracker()
+    
     else:
         raise ValueError("Unsupported tracker type")
         
@@ -61,9 +62,8 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names):
             cv2.putText(frame, f'Frame: {frame_id}', (width - 150, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
             
             pred = df[df['frame_id'] == frame_id]
-           # print(pred.head())  # Kiírja az első néhány sort a DataFrame-ből
-            #print(pred.dtypes)
             tracker.update(list(pred.itertuples()))
+           # print(tracker.tracks)
 
             for track in tracker.tracks:
                 bbox = track.bbox
