@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import sys
 from pathlib import Path
+
 sys.path.append('/notebooks/ObjectDetectionTracking_PN')
 
 ground_truth_columns = ['Frame', 'ID', 'X', 'Y', 'Width', 'Height', 'Confidence', 'Class', 'Visibility']
@@ -35,9 +36,9 @@ def load_ground_truth(gt_file_path: str) -> pd.DataFrame:
 
 def load_tracking_data(trackings_csv_path: str) -> pd.DataFrame:
     try:
-        # read csv assuming the first row fejléc
+        # read csv assuming the first row is head
         tracking_df = pd.read_csv(trackings_csv_path)
-        # átalakítja a 'frame_id' oszlopot egész számmá a konzisztens feldolgozás érdekében
+        #convert the 'frame_id' column to an integer for consistent processing
         tracking_df['frame_id'] = tracking_df['frame_id'].astype(int)
         print("First few rows of the loaded trackings data:")
         print(tracking_df.head())
@@ -71,21 +72,53 @@ def compute_motmetrics(gt_df: pd.DataFrame, test_df: pd.DataFrame) -> mm.MOTAccu
         
     return acc
 
-def eval_results(trackings_csv_path: str, ground_truth_file: str) -> float:
+def eval_results(trackings_csv_path: str, ground_truth_file: str):
     gt_df = load_ground_truth(ground_truth_file)
     test_df = load_tracking_data(trackings_csv_path)
     
     acc = compute_motmetrics(gt_df, test_df)
 
-    # TODO: Calculate metrics using motmetrics library
-    # mh = mm.metrics.create()
-    # summary = mh.compute(acc, metrics=['mota', 'motp'], name='acc')
-    # return summary
+    # Create an aggregator of metrics (összesítő)
+    mh = mm.metrics.create()
 
-    # Dummy return, to be replaced by actual metric calculations
-    return acc
+    # compute aggr of metrics
+    summary = mh.compute(
+        acc, 
+        metrics=mm.metrics.motchallenge_metrics,  #all the MOTChallenge metrics
+        name='acc'
+    )
+    
+    # rendering results in readable format
+    strsummary = mm.io.render_summary(
+        summary,
+        formatters=mh.formatters,
+        namemap=mm.io.motchallenge_metric_names
+    )
+    
+    print(strsummary)
+
+    # precision, recall values
+    precision = summary.loc['acc', 'precision']
+    recall = summary.loc['acc', 'recall']
+
+    # if both > 0 --> F1 Score-t
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    
+    # calculated metrics giving back
+    return {
+        'MOTA': summary.loc['acc', 'mota'],
+        'MOTP': summary.loc['acc', 'motp'],
+        'Precision': precision,
+        'Recall': recall,
+        'F1': f1_score
+    }
+
 
 # Testing
 ground_truth_file = Path('/notebooks/ObjectDetectionTracking_PN/datas/ground_truth/gt.txt')
 trackings_csv_path = Path('/notebooks/ObjectDetectionTracking_PN/datas/trackings/park_people_bytetrack.csv')
-eval_results(trackings_csv_path ,ground_truth_file)
+#eval_results(trackings_csv_path ,ground_truth_file)
+
+results = eval_results(trackings_csv_path, ground_truth_file)
+print("Computed metrics:")
+print(results)
