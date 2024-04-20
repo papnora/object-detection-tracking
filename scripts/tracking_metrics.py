@@ -14,9 +14,11 @@ def load_ground_truth(gt_file_path: str) -> pd.DataFrame:
         with open(gt_file_path) as f:
             for line in f:
                 data_parts = line.strip().split(',')
+                if len(data_parts) < len(ground_truth_columns):  # Handle incomplete rows
+                    data_parts.extend(['1', '1.0'] * (len(ground_truth_columns) - len(data_parts)))
                 try:
-                    # Attempt to convert all entries to float, but keep strings as is for non-convertible values
-                    frame_data = [float(x) if i != 7 else x for i, x in enumerate(data_parts)]
+                    # Convert all to float except for the specific string fields
+                    frame_data = [float(x) if i not in [7, 8] else x for i, x in enumerate(data_parts)]
                     all_gt_data.append(frame_data)
                 except ValueError as e:
                     print(f"Skipping line due to error: {e}. Line content: {line}")
@@ -25,19 +27,28 @@ def load_ground_truth(gt_file_path: str) -> pd.DataFrame:
         return pd.DataFrame(columns=ground_truth_columns)
     
     gt_df = pd.DataFrame(all_gt_data, columns=ground_truth_columns)
+    # Explicitly convert 'Frame' to float or int
+    gt_df['Frame'] = gt_df['Frame'].astype(int)
     print("First few rows of the loaded ground truth data:")
     print(gt_df.head())
     return gt_df
 
 def load_tracking_data(trackings_csv_path: str) -> pd.DataFrame:
     try:
-        tracking_df = pd.read_csv(trackings_csv_path, names=tracking_columns)
-        print("First few rows of the loaded tracking data:")
+        # read csv assuming the first row fejléc
+        tracking_df = pd.read_csv(trackings_csv_path)
+        # átalakítja a 'frame_id' oszlopot egész számmá a konzisztens feldolgozás érdekében
+        tracking_df['frame_id'] = tracking_df['frame_id'].astype(int)
+        print("First few rows of the loaded trackings data:")
         print(tracking_df.head())
     except FileNotFoundError:
         print(f"File not found: {trackings_csv_path}")
         return pd.DataFrame(columns=tracking_columns)
+    except Exception as e:
+        print(f"Error processing the file: {e}")
+        return pd.DataFrame(columns=tracking_columns)
     return tracking_df
+
 
 def compute_motmetrics(gt_df: pd.DataFrame, test_df: pd.DataFrame) -> mm.MOTAccumulator: 
     acc = mm.MOTAccumulator(auto_id=True)
@@ -76,5 +87,5 @@ def eval_results(trackings_csv_path: str, ground_truth_file: str) -> float:
 
 # Testing
 ground_truth_file = Path('/notebooks/ObjectDetectionTracking_PN/datas/ground_truth/gt.txt')
-#trackings_csv_path = Path('/notebooks/ObjectDetectionTracking_PN/datas/trackings/park_people_bytetrack.csv')
+trackings_csv_path = Path('/notebooks/ObjectDetectionTracking_PN/datas/trackings/park_people_bytetrack.csv')
 eval_results(trackings_csv_path ,ground_truth_file)
