@@ -10,6 +10,7 @@ import pandas as pd
 import torch
 import yaml
 from tqdm import tqdm
+from sklearn.model_selection import ParameterGrid
 
 sys.path.append('/notebooks/ObjectDetectionTracking_PN')
 from deepsort_tracking import DeepSORT 
@@ -55,7 +56,7 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names, csv_pa
     
     cap = cv2.VideoCapture(video_path)
     ret, frame = cap.read()
-    frame_id = 0
+    frame_id = 0 # 0 volt
     width = frame.shape[1]
     height = frame.shape[0]
 
@@ -78,6 +79,7 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names, csv_pa
             ret, frame = cap.read()
             if not ret:
                 break
+                
 
             cv2.putText(frame, f'Frame: {frame_id}', (width - 150, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
             
@@ -96,8 +98,7 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names, csv_pa
                 cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), colors[track_id % len(colors)], 2)
                 
                 # adat a csv kiírásra
-                tracking_data.loc[len(tracking_data)] = [frame_id, track_id, int(bbox[0]), int(bbox[1]), int(bbox[2])-int(bbox[0]), int(bbox[3])-int(bbox[1]), 1]
-
+                tracking_data.loc[len(tracking_data)] = [frame_id+1, track_id, int(bbox[0]), int(bbox[1]), int(bbox[2])-int(bbox[0]), int(bbox[3])-int(bbox[1]), 1] 
 
             out.write(frame)
             frame_id += 1
@@ -123,10 +124,17 @@ def main():
 
     video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/park_people.mp4'
 
-    # Run tracking with ByteTrack
+    #param_grid_bytetrack = ParameterGrid(
+     #   {
+      #      "param_1": [1,2,3],
+       #     "param_2": [4,5,6],
+       # }
+    #)
+        # Run tracking with ByteTrack
     tracking_video_out_byte = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/bytetrack_out.avi')
     run_tracking('bytetrack', video_path, tracking_video_out_byte, df, names, csv_path_tracking_output)
-
+        #TODO: Run eval script then save output into table ...
+        
     # Run tracking with DeepSORT
     tracking_video_out_deep = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/deepsort_out.avi')
     run_tracking('deepsort', video_path, tracking_video_out_deep, df, names, csv_path_tracking_output)
