@@ -72,53 +72,56 @@ def compute_motmetrics(gt_df: pd.DataFrame, test_df: pd.DataFrame) -> mm.MOTAccu
         
     return acc
 
-def eval_results(trackings_csv_path: str, ground_truth_file: str):
-    gt_df = load_ground_truth(ground_truth_file)
-    test_df = load_tracking_data(trackings_csv_path)
+def eval_results_for_all_trackers(trackings_csv_path: Path, ground_truth_file: Path):
+    gt_df = load_ground_truth(str(ground_truth_file))
+    results = {}
     
-    acc = compute_motmetrics(gt_df, test_df)
+    for tracking_csv in trackings_csv_path.glob('*.csv'):
+        print(f"Evaluating {tracking_csv.name}")
+        test_df = load_tracking_data(str(tracking_csv))
+        acc = compute_motmetrics(gt_df, test_df)
 
-    # Create an aggregator of metrics (összesítő)
-    mh = mm.metrics.create()
+        # Create an aggregator of metrics (összesítő)
+        mh = mm.metrics.create()
+        # compute aggr of metrics
+        summary = mh.compute(
+            acc,
+            metrics=mm.metrics.motchallenge_metrics,
+            name='acc'
+        )
+        
+        # rendering results in readable format
+        strsummary = mm.io.render_summary(
+            summary,
+            formatters=mh.formatters,
+            namemap=mm.io.motchallenge_metric_names
+        )
+        
+        print(strsummary)
+        
+        # precision, recall values
+        precision = summary.loc['acc', 'precision']
+        recall = summary.loc['acc', 'recall']
+        # if both > 0 --> F1 Score-t
+        f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
-    # compute aggr of metrics
-    summary = mh.compute(
-        acc, 
-        metrics=mm.metrics.motchallenge_metrics,  #all the MOTChallenge metrics
-        name='acc'
-    )
-    
-    # rendering results in readable format
-    strsummary = mm.io.render_summary(
-        summary,
-        formatters=mh.formatters,
-        namemap=mm.io.motchallenge_metric_names
-    )
-    
-    print(strsummary)
-
-    # precision, recall values
-    precision = summary.loc['acc', 'precision']
-    recall = summary.loc['acc', 'recall']
-
-    # if both > 0 --> F1 Score-t
-    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-    
-    # calculated metrics giving back
-    return {
-        'MOTA': summary.loc['acc', 'mota'],
-        'MOTP': summary.loc['acc', 'motp'],
-        'Precision': precision,
-        'Recall': recall,
-        'F1': f1_score
-    }
+        results[tracking_csv.name] = {
+            'MOTA': summary.loc['acc', 'mota'],
+            'MOTP': summary.loc['acc', 'motp'],
+            'Precision': precision,
+            'Recall': recall,
+            'F1': f1_score
+        }
+        
+    return results
 
 
 # Testing
 ground_truth_file = Path('/notebooks/ObjectDetectionTracking_PN/datas/ground_truth/gt.txt')
-trackings_csv_path = Path('/notebooks/ObjectDetectionTracking_PN/datas/trackings/park_people_bytetrack.csv')
-#eval_results(trackings_csv_path ,ground_truth_file)
+trackings_csv_path = Path('/notebooks/ObjectDetectionTracking_PN/datas/trackings')
 
-results = eval_results(trackings_csv_path, ground_truth_file)
-print("Computed metrics:")
-print(results)
+all_results = eval_results_for_all_trackers(trackings_csv_path, ground_truth_file)
+print("All computed metrics:")
+for tracker_name, metrics in all_results.items():
+    print(tracker_name)
+    print(metrics)
