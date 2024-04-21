@@ -39,6 +39,7 @@ def process_video(video_path, model_weights, output_dir):
         model.half()
         stride = int(model.stride.max())  # modell stride
         names = model.module.names if hasattr(model, 'module') else model.names
+        print(names)
         model.eval()  
         
         output_dir = Path(output_dir)
