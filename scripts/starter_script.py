@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import random
-import subprocess
 from pathlib import Path
 from functools import wraps
 
@@ -59,9 +58,6 @@ def performance_monitor(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         tracker_type = args[0] 
-        #tracker_type = kwargs.get('tracker_type', 'Unknown')
-        print("TRACKER TYPE")
-        print(tracker_type)
         start_time = time.perf_counter()
         mem_usage_start = memory_usage()[0]
         result = func(*args, **kwargs)  # Run the function
@@ -97,7 +93,7 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names, csv_pa
     
     cap = cv2.VideoCapture(video_path)
     ret, frame = cap.read()
-    frame_id = 0 # 0 volt
+    frame_id = 0 
     width = frame.shape[1]
     height = frame.shape[0]
 
@@ -114,21 +110,17 @@ def run_tracking(tracker_type, video_path, tracking_video_out, df, names, csv_pa
     print(f"\nRunning {tracker_type} tracking...\n")
 
     out = initialize_video_writer(tracking_video_out, width, height)
-    kwargs['tracker_type'] = tracker_type
-    
     
     try:
         for _ in tqdm(range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))):
             ret, frame = cap.read()
             if not ret:
                 break
-                
 
             cv2.putText(frame, f'Frame: {frame_id}', (width - 150, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
             
             pred = df[df['frame_id'] == frame_id]
             tracker.update(list(pred.itertuples()))
-           # print(tracker.tracks)
 
             for track in tracker.tracks:
                 bbox = track.bbox
@@ -168,15 +160,12 @@ def main():
     video_path = '/notebooks/ObjectDetectionTracking_PN/datas/videos/park_people.mp4'
     metrics_path = '/notebooks/ObjectDetectionTracking_PN/datas/metrics/'
 
-    # Run tracking with ByteTrack
     tracking_video_out_byte = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/bytetrack_out.avi')
     run_tracking('bytetrack', video_path, tracking_video_out_byte, df, names, csv_path_tracking_output, save_performance_data=True, metrics_path=metrics_path)
         
-    # Run tracking with DeepSORT
     tracking_video_out_deep = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/deepsort_out.avi')
     run_tracking('deepsort', video_path, tracking_video_out_deep, df, names, csv_path_tracking_output, save_performance_data=True, metrics_path=metrics_path)
     
-    # Run tracking with BotSORT
     tracking_video_out_bot = Path('/notebooks/ObjectDetectionTracking_PN/datas/videos/botsort_out.avi')
     run_tracking('botsort', video_path, tracking_video_out_bot, df, names, csv_path_tracking_output, save_performance_data=True, metrics_path=metrics_path)
 
