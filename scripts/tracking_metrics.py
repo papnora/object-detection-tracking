@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import sys
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 sys.path.append('/notebooks/ObjectDetectionTracking_PN')
 
@@ -75,15 +76,22 @@ def compute_motmetrics(gt_df: pd.DataFrame, test_df: pd.DataFrame) -> mm.MOTAccu
 def eval_results_for_all_trackers(trackings_csv_path: Path, ground_truth_file: Path):
     gt_df = load_ground_truth(str(ground_truth_file))
     results = {}
+
+    # Define a dictionary to map filenames to tracker names
+    tracker_names = {
+        'park_people_botsort.csv': 'BotSORT',
+        'park_people_bytetrack.csv': 'ByteTrack',
+        'park_people_deepsort.csv': 'DeepSort'
+    }
     
     for tracking_csv in trackings_csv_path.glob('*.csv'):
         print(f"Evaluating {tracking_csv.name}")
         test_df = load_tracking_data(str(tracking_csv))
         acc = compute_motmetrics(gt_df, test_df)
 
-        # Create an aggregator of metrics (összesítő)
+        # Create an aggregator of metrics
         mh = mm.metrics.create()
-        # compute aggr of metrics
+        # compute aggregate of metrics
         summary = mh.compute(
             acc,
             metrics=mm.metrics.motchallenge_metrics,
@@ -99,13 +107,15 @@ def eval_results_for_all_trackers(trackings_csv_path: Path, ground_truth_file: P
         
         print(strsummary)
         
-        # precision, recall values
+        # Calculate precision, recall, and F1 score
         precision = summary.loc['acc', 'precision']
         recall = summary.loc['acc', 'recall']
-        # if both > 0 --> F1 Score-t
         f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
-        results[tracking_csv.name] = {
+        # Use the filename to determine the tracker name
+        tracker_name = tracker_names.get(tracking_csv.name, 'Unknown Tracker')
+        
+        results[tracker_name] = {
             'MOTA': summary.loc['acc', 'mota'],
             'MOTP': summary.loc['acc', 'motp'],
             'Precision': precision,
@@ -115,12 +125,52 @@ def eval_results_for_all_trackers(trackings_csv_path: Path, ground_truth_file: P
         
     return results
 
+def plot_metrics(all_results, diagram_path, name_mapping):
+    # name_mapping to replace keys with the desired display names
+    display_trackers = [name_mapping.get(tracker, tracker) for tracker in all_results.keys()]
+    f1_scores = [all_results[tracker]['F1'] for tracker in all_results.keys()]
+    mota_scores = [all_results[tracker]['MOTA'] for tracker in all_results.keys()]
+
+    # F1 Score diagram
+    plt.figure(figsize=(10, 5))
+    plt.bar(display_trackers, f1_scores, color='#89cff0')
+    plt.xlabel('\n Objektumkövető algoritmusok')
+    plt.ylabel('F1 pontszám')
+    plt.title('Az objektumkövetők F1 pontszámai  \n')
+    plt.ylim([0, 1])
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(diagram_path + 'F1_Scores.png')  # Save as PNG 
+    plt.show()
+
+    # MOTA diagram
+    plt.figure(figsize=(10, 5))
+    plt.bar(display_trackers, mota_scores, color='#FFE697')
+    plt.xlabel('\n Objektumkövető algoritmusok')
+    plt.ylabel('MOTA pontszám')
+    plt.title('Az objektumkövetők MOTA pontszámai  \n')
+    plt.ylim([min(mota_scores) - 0.1, 1])
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(diagram_path + 'MOTA_Scores.png')  # Save as PNG 
+    plt.show()
+
+# Example usage
+name_mapping = {
+    'park_people_botsort.csv': 'BotSORT',
+    'park_people_bytetrack.csv': 'ByteTrack',
+    'park_people_deepsort.csv': 'DeepSort'
+}
 
 # Testing
+diagram_path = '/notebooks/ObjectDetectionTracking_PN/datas/diagrams/'
 ground_truth_file = Path('/notebooks/ObjectDetectionTracking_PN/datas/ground_truth/gt.txt')
 trackings_csv_path = Path('/notebooks/ObjectDetectionTracking_PN/datas/trackings')
 
+# CALCULATING METRICS, DIAGRAMS
 all_results = eval_results_for_all_trackers(trackings_csv_path, ground_truth_file)
+plot_metrics(all_results, diagram_path, name_mapping)
+
 print("All computed metrics:")
 for tracker_name, metrics in all_results.items():
     print(tracker_name)
