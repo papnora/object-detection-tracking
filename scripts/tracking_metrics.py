@@ -31,7 +31,7 @@ def load_ground_truth(gt_file_path: str) -> pd.DataFrame:
     # Explicitly convert 'Frame' to float or int
     gt_df['Frame'] = gt_df['Frame'].astype(int)
     print("First few rows of the loaded ground truth data:")
-   # print(gt_df.head())
+    print(gt_df.head())
     return gt_df
 
 def load_tracking_data(trackings_csv_path: str) -> pd.DataFrame:
